@@ -9,6 +9,11 @@
 #define AK4497_AK4497_H_
 
 #include "main.h"
+#ifdef USE_FREERTOS
+#include "cmsis_os.h"
+#elif USE_THREADX
+#include "app_threadx.h"
+#endif
 
 #define CONTROL1_REG_ADDR		0x00
 #define CONTROL2_REG_ADDR		0x01
@@ -26,38 +31,38 @@
 
 typedef union{
 	struct{
-	uint8_t ACKS:1;
-	uint8_t EXDF:1;
-	uint8_t ECS:1;
-	uint8_t AFSD:1;
-	uint8_t DIF:3;
 	uint8_t RSTN:1;
+	uint8_t DIF:3;
+	uint8_t AFSD:1;
+	uint8_t ECS:1;
+	uint8_t EXDF:1;
+	uint8_t ACKS:1;
 	}bits;
 	uint8_t reg;
 }Control1_reg_u;
 
 typedef union{
 	struct{
-	uint8_t DZFE:1;
-	uint8_t DZFM:1;
-	uint8_t SD:1;
-	uint8_t DFS:2;
-	uint8_t DEM:2;
 	uint8_t SMUTE:1;
+	uint8_t DEM:2;
+	uint8_t DFS:2;
+	uint8_t SD:1;
+	uint8_t DZFM:1;
+	uint8_t DZFE:1;
 	}bits;
 	uint8_t reg;
 }Control2_reg_u;
 
 typedef union{
 	struct{
-	uint8_t DP:1;
-	uint8_t empty_bit:1;
-	uint8_t DCKS:1;
-	uint8_t DCKB:1;
-	uint8_t MONO:1;
-	uint8_t DZFB:1;
-	uint8_t SELLR:1;
 	uint8_t SLOW:1;
+	uint8_t SELLR:1;
+	uint8_t DZFB:1;
+	uint8_t MONO:1;
+	uint8_t DCKB:1;
+	uint8_t DCKS:1;
+	uint8_t empty_bit:1;
+	uint8_t DP:1;
 	}bits;
 	uint8_t reg;
 }Control3_reg_u;
@@ -78,34 +83,34 @@ typedef union{
 
 typedef union{
 	struct{
-	uint8_t INVL:1;
-	uint8_t INVR:1;
-	uint8_t empty_bit:4;
-	uint8_t DFS2:1;
 	uint8_t SSLOW:1;
+	uint8_t DFS2:1;
+	uint8_t empty_bit:4;
+	uint8_t INVR:1;
+	uint8_t INVL:1;
 	}bits;
 	uint8_t reg;
 }Control4_reg_u;
 
 typedef union{
 	struct{
-	uint8_t DDM:1;
-	uint8_t DML:1;
-	uint8_t DMR:1;
-	uint8_t DMC:1;
-	uint8_t DMRE:1;
-	uint8_t empty_bit:1;
-	uint8_t DSDD:1;
 	uint8_t DSDSEL0:1;
+	uint8_t DSDD:1;
+	uint8_t empty_bit:1;
+	uint8_t DMRE:1;
+	uint8_t DMC:1;
+	uint8_t DMR:1;
+	uint8_t DML:1;
+	uint8_t DDM:1;
 	}bits;
 	uint8_t reg;
 }DSD1_reg_u;
 
 typedef union{
 	struct{
-		uint8_t empty_bits:4;
-		uint8_t GC:3;
 		uint8_t SYNCE:1;
+		uint8_t GC:3;
+		uint8_t empty_bits:4;
 	}bits;
 	uint8_t reg;
 }Control5_reg_u;
@@ -113,19 +118,19 @@ typedef union{
 
 typedef union{
 	struct{
-		uint8_t empty_bits:4;
-		uint8_t HLOAD:1;
 		uint8_t SC:3;
+		uint8_t HLOAD:1;
+		uint8_t empty_bits:4;
 	}bits;
 	uint8_t reg;
 }SoundControl_reg_u;
 
 typedef union{
 	struct{
-		uint8_t empty_bits:5;
-		uint8_t DSDPATH:1;
-		uint8_t DSDF:1;
 		uint8_t DSDSEL1:1;
+		uint8_t DSDF:1;
+		uint8_t DSDPATH:1;
+		uint8_t empty_bits:5;
 	}bits;
 	uint8_t reg;
 }DSD2_reg_u;
@@ -133,31 +138,31 @@ typedef union{
 
 typedef union{
 	struct{
-	uint8_t TDM:2;
-	uint8_t SDS:2;
-	uint8_t empty_bit_1:1;
-	uint8_t PW:1;
 	uint8_t empty_bit_2:2;
+	uint8_t PW:1;
+	uint8_t empty_bit_1:1;
+	uint8_t SDS:2;
+	uint8_t TDM:2;
 	}bits;
 	uint8_t reg;
 }Control7_reg_u;
 
 typedef union{
 	struct{
-	uint8_t ATS:2;
-	uint8_t empty_bit_1:1;
-	uint8_t SDS0:1;
-	uint8_t empty_bit_2:2;
-	uint8_t DCHAIN:1;
 	uint8_t TEST:1;
+	uint8_t DCHAIN:1;
+	uint8_t empty_bit_2:2;
+	uint8_t SDS0:1;
+	uint8_t empty_bit_1:1;
+	uint8_t ATS:2;
 	}bits;
 	uint8_t reg;
 }Control8_reg_u;
 
 typedef union{
 	struct{
-		uint8_t empty_bits:5;
 		uint8_t ADFS:3;
+		uint8_t empty_bits:5;
 	}bits;
 	uint8_t reg;
 }DFS_Read_reg_u;
@@ -180,7 +185,8 @@ typedef struct{
 
 typedef struct{
 	I2C_HandleTypeDef *i2c_port;
-	uint8_t DevAddr;
+	uint8_t DevAddr_read;
+	uint8_t DevAddr_write;
 	register_map_s regMap;
 #ifdef USE_FREERTOS
 	SemaphoreHandle_t *mutex;
@@ -246,6 +252,12 @@ typedef enum {
 	MUTED
 }DAC_mute_e;
 
+typedef enum {
+  Manual_Setting_Mode,
+  Auto_Setting_Mode,
+  FS_AutoDetect_Mode
+}Clock_Setting_Mode;
+
 HAL_StatusTypeDef AK4497_Init(dev_s *dev);
 HAL_StatusTypeDef AK4497_Configure(dev_s *dev);
 HAL_StatusTypeDef AK4497_Write_Register(dev_s *dev, uint8_t regAddr, uint8_t *value);
@@ -261,4 +273,5 @@ void AK4497_Set_Gain_Adjustment(dev_s *dev, Gain_Adjustment_e gain);
 void AK4497_Set_MONO_Mode(dev_s *dev, Mono_mode_e mode);
 void AK4497_DSD_InputData_Pins_Select(dev_s *dev, Input_Data_Pins_e pins);
 void AK4497_SoftMute(dev_s *dev, DAC_mute_e mute);
+void AK4497_Set_SystemClock_Mode(dev_s *dev, Clock_Setting_Mode mode);
 #endif /* AK4497_AK4497_H_ */

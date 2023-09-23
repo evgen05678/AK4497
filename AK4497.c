@@ -17,15 +17,20 @@
  * @return
  */
 HAL_StatusTypeDef AK4497_Init(dev_s *dev) {
-	HAL_StatusTypeDef status;
-	uint8_t rxBuffer[21];
+	HAL_StatusTypeDef status = HAL_ERROR;
+	uint8_t rxBuffer[21] ={0};
+	int counter =0;
 #ifdef USE_FREERTOS
 
 #elif USE_THREADX
 	tx_mutex_get(dev->mutex, TX_WAIT_FOREVER);
 #endif
-	status = HAL_I2C_Mem_Read(dev->i2c_port, dev->DevAddr, CONTROL1_REG_ADDR,
-			I2C_MEMADD_SIZE_8BIT, rxBuffer, 21, 100);
+	while(status != HAL_OK){
+	status = HAL_I2C_Mem_Read(dev->i2c_port, dev->DevAddr_read, CONTROL1_REG_ADDR,
+			I2C_MEMADD_SIZE_8BIT, rxBuffer, 21, 1);
+	counter++;
+	}
+
 #ifdef USE_FREERTOS
 
 #elif USE_THREADX
@@ -78,7 +83,7 @@ HAL_StatusTypeDef AK4497_Configure(dev_s *dev) {
 #elif USE_THREADX
 	tx_mutex_get(dev->mutex, TX_WAIT_FOREVER);
 #endif
-	status = HAL_I2C_Mem_Write(dev->i2c_port, dev->DevAddr, CONTROL1_REG_ADDR,
+	status = HAL_I2C_Mem_Write(dev->i2c_port, dev->DevAddr_write, CONTROL1_REG_ADDR,
 			I2C_MEMADD_SIZE_8BIT, txBuffer, sizeof(txBuffer), 100);
 #ifdef USE_FREERTOS
 
@@ -108,7 +113,7 @@ HAL_StatusTypeDef AK4497_Write_Register(dev_s *dev, uint8_t regAddr,
 #elif USE_THREADX
 	tx_mutex_get(dev->mutex, TX_WAIT_FOREVER);
 #endif
-	status = HAL_I2C_Mem_Write(dev->i2c_port, dev->DevAddr, regAddr,
+	status = HAL_I2C_Mem_Write(dev->i2c_port, dev->DevAddr_write, regAddr,
 			I2C_MEMADD_SIZE_8BIT, value, 1, 100);
 #ifdef USE_FREERTOS
 
@@ -136,7 +141,7 @@ HAL_StatusTypeDef AK4497_Read_Register(dev_s *dev, uint8_t regAddr, uint8_t *pRe
 #elif USE_THREADX
 	tx_mutex_get(dev->mutex, TX_WAIT_FOREVER);
 #endif
-	status = HAL_I2C_Mem_Read(dev->i2c_port, dev->DevAddr, regAddr,
+	status = HAL_I2C_Mem_Read(dev->i2c_port, dev->DevAddr_read, regAddr,
 			I2C_MEMADD_SIZE_8BIT, pRegister, 1, 100);
 #ifdef USE_FREERTOS
 
@@ -176,6 +181,27 @@ void AK4497_DSD_Stream_Select(dev_s *dev, uint8_t stream){
 	}
 	AK4497_Write_Register(dev,DSD1_REG_ADDR, &dev->regMap.DSD1.reg);
 	AK4497_Write_Register(dev,DSD1_REG_ADDR, &dev->regMap.DSD2.reg);
+}
+
+/**
+ *
+ */
+void AK4497_Set_SystemClock_Mode(dev_s *dev, Clock_Setting_Mode mode){
+  switch(mode){
+    case Manual_Setting_Mode:
+      dev->regMap.Control1.bits.ACKS = 0;
+      dev->regMap.Control1.bits.AFSD = 0;
+      break;
+    case Auto_Setting_Mode:
+      dev->regMap.Control1.bits.ACKS = 1;
+      dev->regMap.Control1.bits.AFSD = 0;
+      break;
+    case FS_AutoDetect_Mode:
+      dev->regMap.Control1.bits.ACKS = 1;
+      dev->regMap.Control1.bits.AFSD = 1;
+      break;
+  }
+  AK4497_Write_Register(dev,CONTROL1_REG_ADDR, &dev->regMap.Control1.reg);
 }
 
 /**
